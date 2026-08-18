@@ -1,0 +1,215 @@
+--
+--
+--Source of inspiration; https://www.hoyts.com.au/movies?
+--
+--This database is a little movie theatre focused solely on HOYTS Cinema and moviegoers who enjoy going to their favourite theatre. 
+--You will be able to explore the different HOYTS Cinemas locations, learn about the most recent films that the theatre is showing,    
+--and gather knowledge about how the cinema's various operations function. This information is contained in a database format and 
+--includes information and details on customer, order, seat, ticket, and item. 
+--
+
+DROP view CinemaMovies CASCADE;
+
+DROP table Cinema CASCADE;
+DROP table CinemaToMovie CASCADE;
+DROP table Movie CASCADE;
+DROP table Ticket CASCADE;
+DROP table Seat CASCADE;
+DROP table Customer CASCADE;
+DROP table Orders CASCADE;
+DROP table OrderToItem CASCADE;
+DROP table Item CASCADE;
+
+CREATE table Movie
+(
+     movieName          varchar(50),
+     movieYear          integer,
+     durationMin        integer,
+     rating             char(10),
+     ratingDescription  text,
+
+     CONSTRAINT MoviePK PRIMARY KEY (movieName, movieYear),
+     CONSTRAINT check_rating CHECK (rating IN ('M', 'MA', 'PG')),
+     CONSTRAINT check_durationMin CHECK (durationMin <=180)
+);
+
+CREATE table Cinema
+(
+     cinemaLocation      varchar(20), 
+     starRating          decimal(2,1),
+     
+     CONSTRAINT CinemaPK PRIMARY KEY (cinemaLocation),
+     CONSTRAINT check_starRating CHECK (starRating <= 5.0)
+);
+
+CREATE table CinemaToMovie 
+(
+     cinemaLocation     varchar(20),
+     movieName          varchar(50),
+     movieYear          integer,
+
+     CONSTRAINT CinemaToMoviePK PRIMARY KEY (cinemaLocation, movieName, movieYear),
+     CONSTRAINT CinemaToMovieFK_Cinema FOREIGN KEY (cinemaLocation) REFERENCES Cinema ON DELETE CASCADE,
+     CONSTRAINT CinemaToMovieFK_Movie FOREIGN KEY (movieName, movieYear) REFERENCES Movie ON DELETE CASCADE
+);
+
+CREATE table Seat
+(
+     seatID           char(4),
+     cinemaNo         char(2),
+     seatType         varchar(20),
+     seatDescription  text,
+
+     CONSTRAINT SeatPK PRIMARY KEY (seatID, cinemaNo),
+     CONSTRAINT check_seatID CHECK (seatID LIKE '_-_%')
+);
+
+CREATE table Customer
+(
+     customerID       integer,
+     fName            varchar(10),
+     surname          varchar(10),
+     email            varchar(30),
+     isMember         char(2),
+
+     CONSTRAINT CustomerPK PRIMARY KEY (customerID),
+     CONSTRAINT check_isMember CHECK (isMember IN ('Y', 'N'))
+);
+
+CREATE table Ticket 
+(
+     customerID      integer,
+     movieName       varchar(50),
+     movieYear       integer,
+     cinemaLocation  varchar(20),
+     seatID          char(4),
+     cinemaNo        char(2),
+     ticketID        integer,
+     ticketType      varchar(10),
+     ticketPrice     decimal(4,2),
+     date            date,
+     time            time,
+    
+     CONSTRAINT TicketPK PRIMARY KEY (ticketID),
+     CONSTRAINT TicketFK_Seat FOREIGN KEY (seatID, cinemaNo) REFERENCES Seat ON DELETE RESTRICT,
+     CONSTRAINT TicketFK_Customer FOREIGN KEY (customerID) REFERENCES Customer ON UPDATE CASCADE ON DELETE CASCADE,
+     CONSTRAINT TicketFK_Movie FOREIGN KEY (movieName, movieYear) REFERENCES Movie ON DELETE CASCADE,
+     CONSTRAINT TicketFK_Cinema FOREIGN KEY (cinemaLocation) REFERENCES Cinema ON UPDATE CASCADE ON DELETE CASCADE,
+     CONSTRAINT check_ticketPrice CHECK (ticketPrice > 0)
+);
+
+CREATE table Orders
+(
+     customerID      integer,
+     cinemaLocation  varchar(20),
+     orderID         char(9),
+     orderDate       date,
+
+     CONSTRAINT OrdersPK PRIMARY KEY (orderID),
+     CONSTRAINT OrdersFK_Customer FOREIGN KEY (customerID) REFERENCES Customer ON DELETE RESTRICT,
+     CONSTRAINT OrdersFK_Cinema FOREIGN KEY (cinemaLocation) REFERENCES Cinema ON DELETE RESTRICT
+);
+
+CREATE table Item
+(
+     itemID          integer,
+     itemName        varchar(20),
+     price           decimal(4,2),
+
+     CONSTRAINT ItemPK PRIMARY KEY (itemID),
+     CONSTRAINT check_price CHECK (price >0)
+);
+
+CREATE table OrderToItem
+(
+     orderID         char(9),
+     itemID          integer,
+     quantity        integer,
+
+     CONSTRAINT OrderToItemPK PRIMARY KEY (orderID, itemID),
+     CONSTRAINT OrderToItemFK_Orders FOREIGN KEY (orderID) REFERENCES Orders ON DELETE CASCADE,
+     CONSTRAINT OrderToItemFK_Item FOREIGN KEY (itemID) REFERENCES Item ON DELETE CASCADE,
+     CONSTRAINT check_quantity CHECK (quantity >0)
+);
+
+CREATE view CinemaMovies AS
+SELECT cinemaLocation as "Cinema", movieName as "Movie", starRating as "Rating", movieYear as "Release Year" 
+FROM Cinema NATURAL JOIN CinemaToMovie NATURAL JOIN Movie 
+WHERE starrating > 4.0;
+
+INSERT INTO Movie VALUES('Bullet Train', 2022, 127, 'MA', 'strong content & legally restricted to people over the age of 15'); 
+INSERT INTO Movie VALUES('Fall', 2022, 107, 'M', 'moderate content & not suggested for people under the age of 15');
+INSERT INTO Movie VALUES('Scream', 2022, 114, 'MA', 'strong content & legally restricted to people over the age of 15');
+INSERT INTO Movie VALUES('Top Gun: Maverick', 2022, 131, 'M', 'moderate content & not suggested for people under the age of 15');
+INSERT INTO Movie VALUES('Thor: Love and Thunder', 2022, 150, 'M', 'moderate content & not suggested for people under the age of 15');
+INSERT INTO Movie VALUES('Doctor Strange in the Multiverse of Madness', 2022, 180, 'M', 'moderate content & not suggested for people under the age of 15');
+INSERT INTO Movie VALUES('The Batman', 2022, 176, 'M', 'moderate content & not suggested for people under the age of 15');
+INSERT INTO Movie VALUES('Sonic the Hedgehog 2', 2022, 99, 'PG', 'parental guidance suggested');
+INSERT INTO Movie VALUES('Morbius', 2022, 104, 'M', 'moderate content & not suggested for people under the age of 15');
+INSERT INTO Movie VALUES('Minions: The Rise of Gru', 2022, 87, 'PG', 'parental guidance suggested');
+
+INSERT INTO Cinema VALUES('Blacktown', 4.3);
+INSERT INTO Cinema VALUES('Broadway', 4.3);
+INSERT INTO Cinema VALUES('Chatswood Mandarin', 3.8);
+INSERT INTO Cinema VALUES('Chatswood Westfield', 4.4);
+INSERT INTO Cinema VALUES('Eastgardens', 4.2);
+
+INSERT INTO CinemaToMovie VALUES('Blacktown', 'Bullet Train', 2022);
+INSERT INTO CinemaToMovie VALUES('Blacktown', 'Scream', 2022);
+INSERT INTO CinemaToMovie VALUES('Broadway', 'Top Gun: Maverick', 2022);
+INSERT INTO CinemaToMovie VALUES('Broadway', 'Fall', 2022);
+INSERT INTO CinemaToMovie VALUES('Chatswood Mandarin', 'Thor: Love and Thunder', 2022);
+INSERT INTO CinemaToMovie VALUES('Chatswood Mandarin', 'Doctor Strange in the Multiverse of Madness', 2022);
+INSERT INTO CinemaToMovie VALUES('Chatswood Mandarin', 'Sonic the Hedgehog 2', 2022);
+INSERT INTO CinemaToMovie VALUES('Chatswood Westfield', 'Thor: Love and Thunder', 2022);
+INSERT INTO CinemaToMovie VALUES('Chatswood Westfield', 'Doctor Strange in the Multiverse of Madness', 2022);
+INSERT INTO CinemaToMovie VALUES('Eastgardens', 'The Batman', 2022);
+INSERT INTO CinemaToMovie VALUES('Eastgardens', 'Minions: The Rise of Gru', 2022);
+
+INSERT INTO Seat VALUES('E-8', '01', 'LUX', 'premium dine in cinema experience');
+INSERT INTO Seat VALUES('B-1', '02', 'STANDARD', 'recliner seat');
+INSERT INTO Seat VALUES('D-5', '03', 'XTREMESCREEN', 'biggest screen & best sound');
+INSERT INTO Seat VALUES('F-9', '04', 'STANDARD', 'recliner seat');
+INSERT INTO Seat VALUES('C-2', '05', 'STANDARD', 'recliner seat');
+
+INSERT INTO Customer VALUES(784, 'Andrew', 'Lu', 'andrew.l69@gmail.com', 'Y');
+INSERT INTO Customer VALUES(476, 'John', 'Smith', 'john.smith123@gmail.com', 'Y');
+INSERT INTO Customer VALUES(892, 'Emma', 'Stone', 'emma.stone44@gmail.com', 'Y');
+INSERT INTO Customer VALUES(523, 'Serena', 'Williams', 'serena.williams99@gmail.com', 'N');
+INSERT INTO Customer VALUES(764, 'Bruce', 'Lee', 'bruce.lee456@gmail.com', 'N');
+
+INSERT INTO Ticket VALUES(784, 'Doctor Strange in the Multiverse of Madness', 2022, 'Chatswood Westfield', 'E-8', '01', 106263, 'Adult', 23.00, '2022-10-17', '9:00AM');
+INSERT INTO Ticket VALUES(476, 'Bullet Train', 2022, 'Blacktown', 'B-1', '02', 142759, 'Senior', 16.00, '2022-08-24', '9:30AM');
+INSERT INTO Ticket VALUES(892, 'The Batman', 2022, 'Eastgardens', 'D-5', '03', 227381, 'Adult', 23.00, '2022-08-31', '10:30AM');
+INSERT INTO Ticket VALUES(523, 'Sonic the Hedgehog 2', 2022, 'Chatswood Mandarin', 'F-9', '04', 281269, 'Student', 20.00, '2022-09-15', '11:00AM');
+INSERT INTO Ticket VALUES(764, 'Thor: Love and Thunder', 2022, 'Chatswood Mandarin', 'C-2', '05', 300669, 'Student', 20.00, '2022-10-10', '12:00PM');
+
+INSERT INTO Orders VALUES(784, 'Chatswood Westfield', 'HOYTS1080', '2022-10-17');
+INSERT INTO Orders VALUES(476, 'Blacktown', 'HOYTS1297', '2022-08-24');
+INSERT INTO Orders VALUES(892, 'Eastgardens', 'HOYTS1482', '2022-08-31');
+INSERT INTO Orders VALUES(523, 'Chatswood Mandarin', 'HOYTS1523', '2022-09-15');
+INSERT INTO Orders VALUES(764, 'Chatswood Mandarin', 'HOYTS1019', '2022-10-10');
+
+INSERT INTO Item VALUES(1, 'Small Popcorn', 9.00);
+INSERT INTO Item VALUES(2, 'Regular Popcorn', 10.00);
+INSERT INTO Item VALUES(3, 'Large Popcorn', 11.00);
+INSERT INTO Item VALUES(4, 'Hot Chips', 7.00);
+INSERT INTO Item VALUES(5, 'Sweet Potato Fries', 8.00);
+INSERT INTO Item VALUES(6, 'Garlic Bread', 6.00);
+INSERT INTO Item VALUES(7, 'Hawaiian Pizza', 14.90);
+INSERT INTO Item VALUES(8, 'BBQ Meatlovers Pizza', 14.90);
+INSERT INTO Item VALUES(9, 'Choc Top', 6.80);
+INSERT INTO Item VALUES(10, 'Small Drink', 7.70);
+INSERT INTO Item VALUES(11, 'Regular Drink', 8.70);
+INSERT INTO Item VALUES(12, 'Large Drink', 9.70);
+
+INSERT INTO OrderToItem VALUES('HOYTS1080', 3, 1);
+INSERT INTO OrderToItem VALUES('HOYTS1080', 11, 2);
+INSERT INTO OrderToItem VALUES('HOYTS1297', 4, 1);
+INSERT INTO OrderToItem VALUES('HOYTS1297', 6, 2);
+INSERT INTO OrderToItem VALUES('HOYTS1482', 5, 1);
+INSERT INTO OrderToItem VALUES('HOYTS1482', 9, 2);
+INSERT INTO OrderToItem VALUES('HOYTS1482', 12, 2);
+INSERT INTO OrderToItem VALUES('HOYTS1523', 8, 1);
+INSERT INTO OrderToItem VALUES('HOYTS1523', 10, 2);
+INSERT INTO OrderToItem VALUES('HOYTS1019', 1, 3);
